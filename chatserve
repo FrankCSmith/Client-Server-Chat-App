@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+######################################################################################
+# Programmer Name: Franklin Smith
+# Program Name: chatserve
+# Program Description: Implements a server in a TCP client - server network application
+# Course Name: CS372
+# Last Modified: 5/7/2019
+######################################################################################
+# Works Cited: Template modified from https://wiki.python.org/moin/TcpCommunication 
+
+import socket
+import sys
+import string
+
+######################################################################################
+# Function Name: startup
+# Parameters: none
+# Purpose: Starts up server socket and starts listening for client connections, manages
+#          connection, keeps listening until SIGINT is received
+# Pre and Post conditions: port is available, sets up socket and listens for connection
+######################################################################################
+def startup():
+	handle = setHandle()
+	server = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # Create socket
+	ip = socket.gethostbyname(socket.gethostname()) # Get host name
+	port = int(sys.argv[1]) # Get port from sys second arguement from command line
+	address = (ip,port)
+	server.bind(address) # Bind socket to port
+	server.listen(1) # Start listening for client connections
+
+	serverQuitFlag = 0
+	while True:
+		print("Listening on port ",port)
+		conn, addr = server.accept() # Accept conncetion if client requests
+		print("Got a connection from client: ",addr[0])
+		flag = 0
+		while flag != 1:
+			flag = recvMessage(conn) # Wait for message to be received from client
+			if flag != 1: # If no message then client ended connection
+				serverQuitFlag = sendMessage(conn, handle)
+				if serverQuitFlag == 1: # Break out of loop if user on server side quits
+					break
+
+###############################################################
+# Function Name: setHandle
+# Parameters: none
+# Purpose: Retrieves handle from user input 
+# Pre and Post conditions: none, handle is returned
+###############################################################
+def setHandle():
+	serverHandle = input("What would you like your handle to be? ")
+	return serverHandle
+
+###############################################################
+# Function Name: sendMessage
+# Parameters: conn, handle
+# Purpose: Sends message to client that is retrieved from user input
+#          that is appended to user handle
+# Pre and Post conditions: connection was accepted, message is sent
+#          to client
+###############################################################
+def sendMessage(conn, handle):
+	handlePrompt = handle + "> "
+	message = input(handlePrompt)
+	#Send message to client even if quit to let client know connection ended
+	if message == "\\quit":
+		buffMessage = handlePrompt + message
+		conn.send(buffMessage.encode())
+		return 1
+	#Append message to handlePrompt and send message to client
+	buffMessage = handlePrompt + message	
+	conn.send(buffMessage.encode()) #Must encode to bytes
+	return 0
+
+###############################################################
+# Function Name: recvMessage
+# Parameters: conn
+# Purpose: Receives message from client, if nothing is received 
+#		   then client closed connection and 1 is returned
+# Pre and Post conditions: connection was made, message is received
+#                          from client and is printed
+###############################################################
+def recvMessage(conn):
+	data = conn.recv(1024) #Capture received message
+	#If empty that means connection was closed by client
+	if not data.strip():
+		return 1 
+
+	print(data.decode()) #Print message after decoding it to string
+	return 0
+
+# Calls startup function
+startup() 
